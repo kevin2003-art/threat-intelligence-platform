@@ -1,0 +1,4 @@
+requests
+pymongo
+python-dotenv
+elasticsearch==8.11.0
