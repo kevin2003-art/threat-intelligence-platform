@@ -1,8 +1,8 @@
-mport sys
+import sys
 import os
 
-sys.path.insert(0, os.path.dirname(_file_))
-sys.path.insert(0, os.path.join(os.path.dirname(_file_), '..', 'database'))
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
 
 from virustotal_feed import fetch_virustotal_indicators
 from abuseipdb_feed import fetch_abuseipdb_indicators
@@ -61,5 +61,5 @@ def run():
     print("Next step: run  python3 src/siem/risk_scorer.py")
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     run()

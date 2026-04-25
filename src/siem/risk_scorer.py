@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
 
 from mongo_handler import get_collection
-from datetime import datetime
+from datetime import datetime, UTC
 
 
 def calculate_risk_score(indicator: dict):
