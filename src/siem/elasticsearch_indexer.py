@@ -1,7 +1,7 @@
 from elasticsearch import Elasticsearch
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(_file_), '..', 'database'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
 from mongo_handler import get_collection
 
 ES_HOST = "http://localhost:9200"
@@ -120,6 +120,6 @@ def show_critical_threats():
         print(f"  {s.get('value','?'):<25} {s.get('risk_score',0):>5}  {s.get('severity','?'):<10}  {s.get('source','?'):<15}  {s.get('country','?')}")
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     index_all_indicators()
     show_critical_threats()
