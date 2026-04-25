@@ -1,6 +1,6 @@
-mport sys
+import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(_file_), '..', 'database'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
 
 from mongo_handler import get_collection
 from datetime import datetime
@@ -87,5 +87,5 @@ def normalize_all():
         print(f"  {level:10s}: {count:4d}  {bar}")
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     normalize_all()
