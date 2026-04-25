@@ -56,7 +56,7 @@ def fetch_alienvault_indicators():
     return indicators
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     results = fetch_alienvault_indicators()
     for r in results[:3]:
         print(r)

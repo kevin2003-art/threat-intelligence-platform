@@ -1,3 +1,6 @@
+"""
+Main runner — combines all 3 OSINT feeds and stores everything to MongoDB.
+"""
 import sys
 import os
 
@@ -9,8 +12,6 @@ from abuseipdb_feed import fetch_abuseipdb_indicators
 from alienvault_feed import fetch_alienvault_indicators
 from mongo_handler import insert_many_indicators, count_by_source, count_total
 
-# Known malicious IPs from public threat intelligence communities
-# Safe to query — these are already public threat data
 KNOWN_BAD_IPS = [
     "185.220.101.1",
     "185.220.101.2",
@@ -30,26 +31,22 @@ def run():
 
     all_indicators = []
 
-    # Feed 1: VirusTotal (Kevin's module)
     print("\n[1/3] Running VirusTotal feed...")
     vt_results = fetch_virustotal_indicators(KNOWN_BAD_IPS)
     all_indicators.extend(vt_results)
 
-    # Feed 2: AbuseIPDB (Kevin's module)
     print("\n[2/3] Running AbuseIPDB feed...")
     abuse_results = fetch_abuseipdb_indicators()
     all_indicators.extend(abuse_results)
 
-    # Feed 3: AlienVault OTX (Shalwin's module)
     print("\n[3/3] Running AlienVault OTX feed...")
     otx_results = fetch_alienvault_indicators()
     all_indicators.extend(otx_results)
 
-    # Store everything in MongoDB
     print(f"\n[DB] Total collected: {len(all_indicators)} indicators")
-    print("[DB] Saving to MongoDB (duplicates will be skipped)...")
+    print("[DB] Saving to MongoDB...")
     result = insert_many_indicators(all_indicators)
-    print(f"[DB] New entries: {result['inserted']}")
+    print(f"[DB] New entries:        {result['inserted']}")
     print(f"[DB] Duplicates skipped: {result['skipped_duplicates']}")
 
     print(f"\n[DB] Total in database: {count_total()}")
@@ -57,8 +54,7 @@ def run():
     for entry in count_by_source():
         print(f"     {entry['_id']}: {entry['count']}")
 
-    print("\nAggregator complete.")
-    print("Next step: run  python3 src/siem/risk_scorer.py")
+    print("\nDone. Next run: python3 src/siem/risk_scorer.py")
 
 
 if __name__ == "__main__":
