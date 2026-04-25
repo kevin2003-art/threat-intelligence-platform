@@ -1,4 +1,9 @@
-import sys
+# Week 2
+# This module scores all threat indicators collected by the aggregator.
+# Scoring logic varies by source:
+#   VirusTotal  -> ratio of malicious engine votes
+#AbuseIPDB   -> confidence score from their API
+#AlienVault  -> base 65, boosted by dangerous tagsimport sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
 
