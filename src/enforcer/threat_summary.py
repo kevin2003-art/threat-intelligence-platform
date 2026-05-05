@@ -82,5 +82,5 @@ def generate_full_report():
     print("=" * 65)
 
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     generate_full_report()
