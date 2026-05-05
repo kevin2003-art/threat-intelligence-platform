@@ -2,7 +2,10 @@ import requests
 import json
 import os
 import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'enforcer'))
+
 from mongo_handler import get_collection
 from block_logger import get_recent_logs, get_blocked_count
 
@@ -48,7 +51,6 @@ def print_block_logs_summary():
         src = b.get("source", "Unknown")
         country = b.get("country", "Unknown")
         severity = b.get("severity", "Unknown")
-
         sources[src] = sources.get(src, 0) + 1
         countries[country] = countries.get(country, 0) + 1
         severities[severity] = severities.get(severity, 0) + 1
@@ -85,8 +87,5 @@ def print_block_logs_summary():
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'enforcer'))
-    from block_logger import get_recent_logs, get_blocked_count
-
     check_kibana()
     print_block_logs_summary()
