@@ -1,7 +1,7 @@
 import sys
 import os
-sys.path.insert(0, os.path.dirname(_file_))
-sys.path.insert(0, os.path.join(os.path.dirname(_file_), '..', 'database'))
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
 
 from mongo_handler import get_collection, count_total, count_by_source
 from block_logger import get_blocked_count, get_recent_logs
@@ -82,5 +82,5 @@ def generate_full_report():
     print("=" * 65)
 
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     generate_full_report()
