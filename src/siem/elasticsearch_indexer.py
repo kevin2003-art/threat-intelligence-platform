@@ -9,7 +9,6 @@ INDEX_NAME = "threat-indicators"
 
 
 def get_es_client():
-    """Connect to Elasticsearch."""
     es = Elasticsearch([ES_HOST])
     if not es.ping():
         raise ConnectionError(
@@ -21,7 +20,6 @@ def get_es_client():
 
 
 def create_index(es):
-    """Create the index with proper field mappings."""
     if es.indices.exists(index=INDEX_NAME):
         print(f"[ES] Index '{INDEX_NAME}' already exists — skipping creation")
         return
@@ -65,7 +63,6 @@ def create_index(es):
 
 
 def index_all_indicators():
-    """Push all scored indicators from MongoDB into Elasticsearch."""
     es = get_es_client()
     create_index(es)
 
@@ -94,7 +91,6 @@ def index_all_indicators():
 
 
 def show_critical_threats():
-    """Print the top 10 most dangerous indicators."""
     es = get_es_client()
     result = es.search(
         index=INDEX_NAME,

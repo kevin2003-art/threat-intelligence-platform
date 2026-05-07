@@ -10,7 +10,6 @@ BASE_URL = "https://www.virustotal.com/api/v3"
 
 
 def get_ip_report(ip_address):
-    """Query VirusTotal for one IP address and return indicator dict or None."""
     headers = {
         "x-apikey": API_KEY,
         "accept": "application/json"
@@ -58,7 +57,6 @@ def get_ip_report(ip_address):
 
 
 def fetch_virustotal_indicators(ip_list):
-    """Check a list of IPs and return all malicious ones."""
     print(f"[VirusTotal] Checking {len(ip_list)} IPs...")
     results = []
     for ip in ip_list:

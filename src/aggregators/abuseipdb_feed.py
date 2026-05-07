@@ -9,7 +9,6 @@ BASE_URL = "https://api.abuseipdb.com/api/v2"
 
 
 def fetch_abuseipdb_indicators(confidence_minimum=85, limit=200):
-    """Fetch high-confidence abusive IPs from AbuseIPDB blacklist."""
     print(f"[AbuseIPDB] Fetching blacklist (confidence >= {confidence_minimum})...")
 
     headers = {

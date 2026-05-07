@@ -12,7 +12,6 @@ COLLECTION_NAME = "indicators"
 
 
 def get_collection():
-    """Connect to MongoDB and return the indicators collection."""
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
     collection = db[COLLECTION_NAME]
@@ -25,7 +24,6 @@ def get_collection():
 
 
 def insert_indicator(indicator: dict) -> bool:
-    """Insert one indicator. Returns True if new, False if duplicate."""
     collection = get_collection()
     indicator["ingested_at"] = datetime.utcnow().isoformat()
     indicator["processed"] = False
@@ -37,7 +35,6 @@ def insert_indicator(indicator: dict) -> bool:
 
 
 def insert_many_indicators(indicators: list) -> dict:
-    """Bulk insert, skipping duplicates. Returns counts."""
     inserted, skipped = 0, 0
     for indicator in indicators:
         if insert_indicator(indicator):
@@ -48,13 +45,11 @@ def insert_many_indicators(indicators: list) -> dict:
 
 
 def get_all_indicators(limit=1000):
-    """Get all indicators from database."""
     collection = get_collection()
     return list(collection.find({}, {"_id": 0}).limit(limit))
 
 
 def get_scored_indicators(min_score=0):
-    """Get indicators that have been scored."""
     collection = get_collection()
     return list(collection.find(
         {"risk_score": {"$exists": True, "$gte": min_score}},
@@ -63,7 +58,6 @@ def get_scored_indicators(min_score=0):
 
 
 def count_by_source():
-    """Count indicators grouped by source."""
     collection = get_collection()
     pipeline = [
         {"$group": {"_id": "$source", "count": {"$sum": 1}}},
@@ -73,12 +67,10 @@ def count_by_source():
 
 
 def count_total():
-    """Return total number of indicators."""
     return get_collection().count_documents({})
 
 
 def clear_all():
-    """Delete everything — use only for testing."""
     get_collection().delete_many({})
     print("[MongoDB] All indicators deleted")
 
