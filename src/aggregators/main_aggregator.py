@@ -1,6 +1,3 @@
-"""
-Main runner — combines all 3 OSINT feeds and stores everything to MongoDB.
-"""
 import sys
 import os
 

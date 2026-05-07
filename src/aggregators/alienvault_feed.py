@@ -9,7 +9,6 @@ BASE_URL = "https://otx.alienvault.com/api/v1"
 
 
 def fetch_recent_pulses(limit=25):
-    """Get recent threat intelligence pulses from AlienVault OTX."""
     headers = {
         "X-OTX-API-KEY": OTX_API_KEY,
         "Content-Type": "application/json"
@@ -26,7 +25,6 @@ def fetch_recent_pulses(limit=25):
 
 
 def fetch_alienvault_indicators():
-    """Fetch pulses and extract all IP and domain indicators."""
     print("[AlienVault OTX] Fetching threat pulses...")
     pulses = fetch_recent_pulses(limit=25)
     print(f"[AlienVault OTX] Got {len(pulses)} pulses")

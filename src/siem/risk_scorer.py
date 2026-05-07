@@ -1,9 +1,3 @@
-# Week 2
-# This module scores all threat indicators collected by the aggregator.
-# Scoring logic varies by source:
-#   VirusTotal  -> ratio of malicious engine votes
-#AbuseIPDB   -> confidence score from their API
-#AlienVault  -> base 65, boosted by dangerous tags
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'database'))
@@ -13,10 +7,6 @@ from datetime import datetime, UTC
 
 
 def calculate_risk_score(indicator: dict):
-    """
-    Calculate normalized risk score and severity for one indicator.
-    Each source uses its own scoring logic then maps to 0-100.
-    """
     source = indicator.get("source", "Unknown")
 
     if source == "VirusTotal":
@@ -69,7 +59,6 @@ def calculate_risk_score(indicator: dict):
 
 
 def normalize_all():
-    """Score every indicator in the database."""
     collection = get_collection()
     indicators = list(collection.find({}))
 
