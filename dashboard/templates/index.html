@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIP — SOC Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="shield">🛡</span>
+    <span>THREAT INTELLIGENCE PLATFORM</span>
+  </div>
+  <div class="nav-center">
+    <a href="#overview" class="nav-link">Overview</a>
+    <a href="#alerts-sec" class="nav-link">Alerts</a>
+    <a href="#indicators-sec" class="nav-link">Indicators</a>
+    <a href="#blocked-sec" class="nav-link">Blocked IPs</a>
+    <a href="#logs-sec" class="nav-link">Audit Log</a>
+    <a href="#compliance-sec" class="nav-link">Compliance</a>
+  </div>
+  <div class="nav-right">
+    <div class="live-indicator">
+      <span class="live-dot"></span>
+      <span>LIVE</span>
+    </div>
+    <span id="clock"></span>
+    <button class="btn-refresh" onclick="refreshAll()">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <div class="page-title">SOC OPERATIONS CENTER — FINANCE &amp; BANKING SECURITY</div>
+    <div class="last-update">Last update: <span id="lastUpdate">—</span></div>
+  </div>
+
+  <!-- KIBANA LINK -->
+  <div class="kibana-panel">
+    <div class="kibana-info">
+      <h3>🔍 Kibana SIEM Dashboard</h3>
+      <p>Advanced visualizations, full Elasticsearch search and custom analytics</p>
+    </div>
+    <a href="http://localhost:5601" target="_blank" class="btn-kibana">OPEN KIBANA →</a>
+  </div>
+
+  <!-- STATS -->
+  <div id="overview">
+    <div class="stats-grid">
+      <div class="stat-card c-total">
+        <div class="stat-label">Total Indicators</div>
+        <div class="stat-value" id="total">—</div>
+      </div>
+      <div class="stat-card c-critical">
+        <div class="stat-label">Critical Threats</div>
+        <div class="stat-value" id="critical">—</div>
+      </div>
+      <div class="stat-card c-high">
+        <div class="stat-label">High Threats</div>
+        <div class="stat-value" id="high">—</div>
+      </div>
+      <div class="stat-card c-blocked">
+        <div class="stat-label">IPs Blocked</div>
+        <div class="stat-value" id="blocked">—</div>
+      </div>
+      <div class="stat-card c-rollback">
+        <div class="stat-label">Rollbacks</div>
+        <div class="stat-value" id="rollbacks">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW -->
+  <div class="grid-3">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Severity Distribution</span>
+      </div>
+      <div class="panel-body" style="text-align:center">
+        <canvas id="severityChart" width="220" height="220"></canvas>
+        <div class="legend">
+          <span class="legend-item"><span class="leg-dot" style="background:#ef4444"></span>CRITICAL</span>
+          <span class="legend-item"><span class="leg-dot" style="background:#f97316"></span>HIGH</span>
+          <span class="legend-item"><span class="leg-dot" style="background:#eab308"></span>MEDIUM</span>
+          <span class="legend-item"><span class="leg-dot" style="background:#22c55e"></span>LOW</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Indicators by Feed Source</span>
+      </div>
+      <div class="panel-body" style="text-align:center">
+        <canvas id="sourceChart" width="320" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">OSINT Feed Status</span>
+      </div>
+      <div class="panel-body" id="feedStatus"></div>
+    </div>
+  </div>
+
+  <!-- COUNTRIES + ALERTS -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Top Threat Countries</span>
+      </div>
+      <div class="panel-body">
+        <table class="data-table">
+          <thead>
+            <tr><th>#</th><th>Country</th><th>Indicators</th></tr>
+          </thead>
+          <tbody id="countriesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="alerts-sec">
+      <div class="panel-header">
+        <span class="panel-title">⚠ Live Security Alerts</span>
+      </div>
+      <div class="panel-body" id="alertsContainer"></div>
+    </div>
+  </div>
+
+  <!-- THREAT INDICATORS -->
+  <div class="section-header" id="indicators-sec">
+    <span class="section-title">Threat Indicators</span>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterBySeverity('')">ALL</button>
+    <button class="filter-btn" onclick="filterBySeverity('CRITICAL')">CRITICAL</button>
+    <button class="filter-btn" onclick="filterBySeverity('HIGH')">HIGH</button>
+    <button class="filter-btn" onclick="filterBySeverity('LOW')">LOW</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-body table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>IP / Domain</th>
+            <th>Type</th>
+            <th>Source</th>
+            <th>Severity</th>
+            <th>Risk Score</th>
+            <th>Country</th>
+          </tr>
+        </thead>
+        <tbody id="indicatorsTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BLOCKED IPs -->
+  <div class="section-header" id="blocked-sec">
+    <span class="section-title">🚫 Active Firewall Blocks</span>
+    <div class="section-line"></div>
+    <span class="section-count" id="blockedCount">0</span>
+  </div>
+
+  <div class="panel">
+    <div class="panel-body table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>IP Address</th>
+            <th>Risk Score</th>
+            <th>Country</th>
+            <th>Source</th>
+            <th>Rollback</th>
+          </tr>
+        </thead>
+        <tbody id="blockedTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AUDIT LOG -->
+  <div class="section-header" id="logs-sec">
+    <span class="section-title">📋 Compliance Audit Log</span>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-body table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>IP Address</th>
+            <th>Action</th>
+            <th>Severity</th>
+            <th>Source</th>
+            <th>Score</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="logsTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COMPLIANCE -->
+  <div class="section-header" id="compliance-sec">
+    <span class="section-title">🔒 PCI-DSS Compliance</span>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-body">
+      <div class="compliance-grid">
+        <div class="comp-item">
+          <span class="comp-label">TOTAL IPs BLOCKED</span>
+          <span class="comp-value" id="comp-total">—</span>
+        </div>
+        <div class="comp-item">
+          <span class="comp-label">ROLLBACKS PERFORMED</span>
+          <span class="comp-value" id="comp-rollbacks">—</span>
+        </div>
+        <div class="comp-item">
+          <span class="comp-label">CRITICAL THREATS</span>
+          <span class="comp-value" id="comp-critical">—</span>
+        </div>
+        <div class="comp-item">
+          <span class="comp-label">REPORT GENERATED</span>
+          <span class="comp-value" id="comp-time" style="font-size:11px">—</span>
+        </div>
+      </div>
+      <div class="compliance-status">
+        <div class="status-row">
+          <span>PCI-DSS Audit Logs</span>
+          <span class="status-ok">✓ COMPLIANT</span>
+        </div>
+        <div class="status-row">
+          <span>Rollback Mechanism</span>
+          <span class="status-ok">✓ IMPLEMENTED</span>
+        </div>
+        <div class="status-row">
+          <span>Whitelist Protection</span>
+          <span class="status-ok">✓ ACTIVE</span>
+        </div>
+        <div class="status-row">
+          <span>Continuous Monitoring</span>
+          <span class="status-ok">✓ ACTIVE — 30s intervals</span>
+        </div>
+        <div class="status-row">
+          <span>Immutable Block Logs</span>
+          <span class="status-ok">✓ MONGODB SECURED</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>
