@@ -1,269 +1,324 @@
-<!DOCTYPE html>
+k<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TIP — SOC Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TIP — Advanced SOC Dashboard</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+<!-- NAVBAR -->
 <nav class="navbar">
   <div class="nav-brand">
-    <span class="shield">🛡</span>
-    <span>THREAT INTELLIGENCE PLATFORM</span>
+    <span>🛡</span>
+    <span>TIP — SOC OPERATIONS</span>
   </div>
   <div class="nav-center">
-    <a href="#overview" class="nav-link">Overview</a>
+    <a href="#overview"   class="nav-link">Overview</a>
     <a href="#alerts-sec" class="nav-link">Alerts</a>
-    <a href="#indicators-sec" class="nav-link">Indicators</a>
-    <a href="#blocked-sec" class="nav-link">Blocked IPs</a>
-    <a href="#logs-sec" class="nav-link">Audit Log</a>
-    <a href="#compliance-sec" class="nav-link">Compliance</a>
+    <a href="#map-sec"    class="nav-link">Threat Map</a>
+    <a href="#ind-sec"    class="nav-link">Indicators</a>
+    <a href="#block-sec"  class="nav-link">Blocked</a>
+    <a href="#log-sec"    class="nav-link">Audit Log</a>
+    <a href="#comp-sec"   class="nav-link">Compliance</a>
   </div>
   <div class="nav-right">
-    <div class="live-indicator">
-      <span class="live-dot"></span>
-      <span>LIVE</span>
+    <div class="live-pill">
+      <span class="live-dot"></span>LIVE
     </div>
     <span id="clock"></span>
+    <button id="themeBtn" class="theme-toggle" onclick="toggleTheme()">☀ Light</button>
     <button class="btn-refresh" onclick="refreshAll()">
       <span id="refreshIcon">↻</span> Refresh
     </button>
   </div>
 </nav>
 
-<div class="container">
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
 
-  <div class="page-header">
-    <div class="page-title">SOC OPERATIONS CENTER — FINANCE &amp; BANKING SECURITY</div>
-    <div class="last-update">Last update: <span id="lastUpdate">—</span></div>
-  </div>
+  <!-- LEFT: MAIN CONTENT -->
+  <div class="main-content">
 
-  <!-- KIBANA LINK -->
-  <div class="kibana-panel">
-    <div class="kibana-info">
-      <h3>🔍 Kibana SIEM Dashboard</h3>
-      <p>Advanced visualizations, full Elasticsearch search and custom analytics</p>
+    <div class="page-header" id="overview">
+      <div class="page-title">FINANCE &amp; BANKING — ADVANCED THREAT INTELLIGENCE PLATFORM</div>
+      <div class="last-update">Last sync: <span id="lastUpdate">—</span></div>
     </div>
-    <a href="http://localhost:5601" target="_blank" class="btn-kibana">OPEN KIBANA →</a>
-  </div>
 
-  <!-- STATS -->
-  <div id="overview">
+    <!-- KIBANA LINK -->
+    <div class="kibana-panel">
+      <div class="kibana-info">
+        <h3>🔍 Kibana SIEM — Deep Forensics</h3>
+        <p>Full Elasticsearch analytics, custom queries and advanced visualizations</p>
+      </div>
+      <a href="http://localhost:5601" target="_blank" class="btn-kibana">OPEN KIBANA →</a>
+    </div>
+
+    <!-- STATS -->
     <div class="stats-grid">
-      <div class="stat-card c-total">
+      <div class="stat-card glass sc-total">
         <div class="stat-label">Total Indicators</div>
         <div class="stat-value" id="total">—</div>
       </div>
-      <div class="stat-card c-critical">
+      <div class="stat-card glass sc-crit">
         <div class="stat-label">Critical Threats</div>
         <div class="stat-value" id="critical">—</div>
       </div>
-      <div class="stat-card c-high">
+      <div class="stat-card glass sc-high">
         <div class="stat-label">High Threats</div>
         <div class="stat-value" id="high">—</div>
       </div>
-      <div class="stat-card c-blocked">
+      <div class="stat-card glass sc-blocked">
         <div class="stat-label">IPs Blocked</div>
         <div class="stat-value" id="blocked">—</div>
       </div>
-      <div class="stat-card c-rollback">
+      <div class="stat-card glass sc-rollback">
         <div class="stat-label">Rollbacks</div>
         <div class="stat-value" id="rollbacks">—</div>
       </div>
     </div>
-  </div>
 
-  <!-- CHARTS ROW -->
-  <div class="grid-3">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Severity Distribution</span>
+    <!-- CHARTS ROW -->
+    <div class="charts-row">
+      <div class="panel glass">
+        <div class="panel-head">
+          <span class="panel-title">Severity Distribution</span>
+        </div>
+        <div class="panel-body" style="text-align:center">
+          <canvas id="severityChart" width="200" height="200"></canvas>
+          <div class="legend">
+            <span class="leg"><span class="leg-dot" style="background:#ff003c"></span>CRIT</span>
+            <span class="leg"><span class="leg-dot" style="background:#ff8c00"></span>HIGH</span>
+            <span class="leg"><span class="leg-dot" style="background:#ffd700"></span>MED</span>
+            <span class="leg"><span class="leg-dot" style="background:#39ff14"></span>LOW</span>
+          </div>
+        </div>
       </div>
-      <div class="panel-body" style="text-align:center">
-        <canvas id="severityChart" width="220" height="220"></canvas>
-        <div class="legend">
-          <span class="legend-item"><span class="leg-dot" style="background:#ef4444"></span>CRITICAL</span>
-          <span class="legend-item"><span class="leg-dot" style="background:#f97316"></span>HIGH</span>
-          <span class="legend-item"><span class="leg-dot" style="background:#eab308"></span>MEDIUM</span>
-          <span class="legend-item"><span class="leg-dot" style="background:#22c55e"></span>LOW</span>
+      <div class="panel glass">
+        <div class="panel-head">
+          <span class="panel-title">Indicators by Feed Source</span>
+        </div>
+        <div class="panel-body" style="text-align:center">
+          <canvas id="sourceChart" width="380" height="200"></canvas>
+        </div>
+      </div>
+      <div class="panel glass">
+        <div class="panel-head">
+          <span class="panel-title">OSINT Feed Status</span>
+        </div>
+        <div class="panel-body" id="feedStatus"></div>
+      </div>
+    </div>
+
+    <!-- THREAT MAP -->
+    <div class="sec-head" id="map-sec">
+      <span class="sec-title">Global Threat Map</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="panel glass" style="margin-bottom:16px">
+      <div class="panel-head">
+        <span class="panel-title">Live Threat Origin Heat Map</span>
+        <span style="font-size:10px;color:#4a6080">Auto-updates every 30s</span>
+      </div>
+      <div class="panel-body">
+        <div class="threat-map-container">
+          <span class="map-label">THREAT DENSITY VISUALIZATION</span>
+          <div class="map-grid" id="mapGrid"></div>
+        </div>
+        <div style="margin-top:12px">
+          <table class="dtable">
+            <thead>
+              <tr><th>#</th><th>Country</th><th>Threat Volume</th></tr>
+            </thead>
+            <tbody id="countriesTable"></tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Indicators by Feed Source</span>
-      </div>
-      <div class="panel-body" style="text-align:center">
-        <canvas id="sourceChart" width="320" height="220"></canvas>
-      </div>
+    <!-- ALERTS -->
+    <div class="sec-head" id="alerts-sec">
+      <span class="sec-title">⚡ Live Security Alerts</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="panel glass" style="margin-bottom:16px">
+      <div class="panel-body" id="alertsContainer"></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">OSINT Feed Status</span>
-      </div>
-      <div class="panel-body" id="feedStatus"></div>
+    <!-- INDICATORS -->
+    <div class="sec-head" id="ind-sec">
+      <span class="sec-title">Threat Indicators</span>
+      <div class="sec-line"></div>
+      <span class="sec-badge" id="indCount"></span>
     </div>
-  </div>
-
-  <!-- COUNTRIES + ALERTS -->
-  <div class="grid-2">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Top Threat Countries</span>
-      </div>
-      <div class="panel-body">
-        <table class="data-table">
+    <div class="filter-bar">
+      <button class="flt-btn active" onclick="filterSev('',this)">ALL</button>
+      <button class="flt-btn fc" onclick="filterSev('CRITICAL',this)">CRITICAL</button>
+      <button class="flt-btn fh" onclick="filterSev('HIGH',this)">HIGH</button>
+      <button class="flt-btn fl" onclick="filterSev('LOW',this)">LOW</button>
+    </div>
+    <div class="panel glass" style="margin-bottom:16px">
+      <div class="tbl-wrap">
+        <table class="dtable">
           <thead>
-            <tr><th>#</th><th>Country</th><th>Indicators</th></tr>
+            <tr>
+              <th>IP / Domain</th><th>Type</th><th>Source</th>
+              <th>Severity</th><th>Risk Score</th><th>Country</th>
+            </tr>
           </thead>
-          <tbody id="countriesTable"></tbody>
+          <tbody id="indicatorsTable"></tbody>
         </table>
       </div>
     </div>
 
-    <div class="panel" id="alerts-sec">
-      <div class="panel-header">
-        <span class="panel-title">⚠ Live Security Alerts</span>
+    <!-- BLOCKED IPs -->
+    <div class="sec-head" id="block-sec">
+      <span class="sec-title">🚫 Active Firewall Blocks</span>
+      <div class="sec-line"></div>
+      <span class="sec-badge" id="blockedCount">0</span>
+    </div>
+    <div class="panel glass" style="margin-bottom:16px">
+      <div class="tbl-wrap">
+        <table class="dtable">
+          <thead>
+            <tr>
+              <th>IP Address</th><th>Score</th><th>Country</th><th>Source</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="blockedTable"></tbody>
+        </table>
       </div>
-      <div class="panel-body" id="alertsContainer"></div>
     </div>
-  </div>
 
-  <!-- THREAT INDICATORS -->
-  <div class="section-header" id="indicators-sec">
-    <span class="section-title">Threat Indicators</span>
-    <div class="section-line"></div>
-  </div>
-
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterBySeverity('')">ALL</button>
-    <button class="filter-btn" onclick="filterBySeverity('CRITICAL')">CRITICAL</button>
-    <button class="filter-btn" onclick="filterBySeverity('HIGH')">HIGH</button>
-    <button class="filter-btn" onclick="filterBySeverity('LOW')">LOW</button>
-  </div>
-
-  <div class="panel">
-    <div class="panel-body table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>IP / Domain</th>
-            <th>Type</th>
-            <th>Source</th>
-            <th>Severity</th>
-            <th>Risk Score</th>
-            <th>Country</th>
-          </tr>
-        </thead>
-        <tbody id="indicatorsTable"></tbody>
-      </table>
+    <!-- AUDIT LOG -->
+    <div class="sec-head" id="log-sec">
+      <span class="sec-title">📋 PCI-DSS Compliance Audit Log</span>
+      <div class="sec-line"></div>
     </div>
-  </div>
-
-  <!-- BLOCKED IPs -->
-  <div class="section-header" id="blocked-sec">
-    <span class="section-title">🚫 Active Firewall Blocks</span>
-    <div class="section-line"></div>
-    <span class="section-count" id="blockedCount">0</span>
-  </div>
-
-  <div class="panel">
-    <div class="panel-body table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>IP Address</th>
-            <th>Risk Score</th>
-            <th>Country</th>
-            <th>Source</th>
-            <th>Rollback</th>
-          </tr>
-        </thead>
-        <tbody id="blockedTable"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- AUDIT LOG -->
-  <div class="section-header" id="logs-sec">
-    <span class="section-title">📋 Compliance Audit Log</span>
-    <div class="section-line"></div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-body table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>IP Address</th>
-            <th>Action</th>
-            <th>Severity</th>
-            <th>Source</th>
-            <th>Score</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody id="logsTable"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- COMPLIANCE -->
-  <div class="section-header" id="compliance-sec">
-    <span class="section-title">🔒 PCI-DSS Compliance</span>
-    <div class="section-line"></div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-body">
-      <div class="compliance-grid">
-        <div class="comp-item">
-          <span class="comp-label">TOTAL IPs BLOCKED</span>
-          <span class="comp-value" id="comp-total">—</span>
-        </div>
-        <div class="comp-item">
-          <span class="comp-label">ROLLBACKS PERFORMED</span>
-          <span class="comp-value" id="comp-rollbacks">—</span>
-        </div>
-        <div class="comp-item">
-          <span class="comp-label">CRITICAL THREATS</span>
-          <span class="comp-value" id="comp-critical">—</span>
-        </div>
-        <div class="comp-item">
-          <span class="comp-label">REPORT GENERATED</span>
-          <span class="comp-value" id="comp-time" style="font-size:11px">—</span>
-        </div>
+    <div class="panel glass" style="margin-bottom:16px">
+      <div class="tbl-wrap">
+        <table class="dtable">
+          <thead>
+            <tr>
+              <th>IP Address</th><th>Action</th><th>Severity</th>
+              <th>Source</th><th>Score</th><th>Timestamp (Local)</th>
+            </tr>
+          </thead>
+          <tbody id="logsTable"></tbody>
+        </table>
       </div>
-      <div class="compliance-status">
-        <div class="status-row">
-          <span>PCI-DSS Audit Logs</span>
-          <span class="status-ok">✓ COMPLIANT</span>
+    </div>
+
+    <!-- COMPLIANCE -->
+    <div class="sec-head" id="comp-sec">
+      <span class="sec-title">🔒 Compliance Summary</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="panel glass" style="margin-bottom:16px">
+      <div class="panel-body">
+        <div class="comp-grid">
+          <div class="comp-card">
+            <span class="comp-label">Total Blocked</span>
+            <span class="comp-val" id="comp-total">—</span>
+          </div>
+          <div class="comp-card">
+            <span class="comp-label">Rollbacks</span>
+            <span class="comp-val" id="comp-rollbacks">—</span>
+          </div>
+          <div class="comp-card">
+            <span class="comp-label">Critical Threats</span>
+            <span class="comp-val" id="comp-critical">—</span>
+          </div>
+          <div class="comp-card">
+            <span class="comp-label">Report Time</span>
+            <span class="comp-val" style="font-size:12px" id="comp-time">—</span>
+          </div>
         </div>
-        <div class="status-row">
-          <span>Rollback Mechanism</span>
-          <span class="status-ok">✓ IMPLEMENTED</span>
-        </div>
-        <div class="status-row">
-          <span>Whitelist Protection</span>
-          <span class="status-ok">✓ ACTIVE</span>
-        </div>
-        <div class="status-row">
-          <span>Continuous Monitoring</span>
-          <span class="status-ok">✓ ACTIVE — 30s intervals</span>
-        </div>
-        <div class="status-row">
-          <span>Immutable Block Logs</span>
-          <span class="status-ok">✓ MONGODB SECURED</span>
+        <div class="comp-checks">
+          <div class="comp-row"><span>PCI-DSS Audit Logs</span><span class="comp-ok">✓ COMPLIANT</span></div>
+          <div class="comp-row"><span>Rollback Mechanism</span><span class="comp-ok">✓ IMPLEMENTED</span></div>
+          <div class="comp-row"><span>Whitelist Protection</span><span class="comp-ok">✓ ACTIVE</span></div>
+          <div class="comp-row"><span>Continuous Monitoring (30s)</span><span class="comp-ok">✓ RUNNING</span></div>
+          <div class="comp-row"><span>Immutable Block Logs — MongoDB</span><span class="comp-ok">✓ SECURED</span></div>
         </div>
       </div>
     </div>
-  </div>
 
-</div>
+  </div><!-- /main-content -->
+
+  <!-- RIGHT: SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- SYSTEM HEALTH -->
+    <div class="panel glass">
+      <div class="panel-head">
+        <span class="panel-title">System Health</span>
+      </div>
+      <div class="panel-body" id="healthPanel">
+        <div class="no-data">Loading...</div>
+      </div>
+    </div>
+
+    <!-- WHOIS LOOKUP -->
+    <div class="panel glass">
+      <div class="panel-head">
+        <span class="panel-title">IP Whois &amp; Enrichment</span>
+      </div>
+      <div class="panel-body">
+        <div class="whois-input-row">
+          <input id="whoisInput" class="whois-input" placeholder="Enter IP address..." type="text"
+                 onkeydown="if(event.key==='Enter')lookupWhois()">
+          <button class="btn-lookup" onclick="lookupWhois()">LOOKUP</button>
+        </div>
+        <div id="whoisResult" class="whois-result">
+          <span style="color:#4a6080">Enter an IP to query ISP, org, proxy and hosting status.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANUAL BLOCK -->
+    <div class="panel glass">
+      <div class="panel-head">
+        <span class="panel-title">⚡ Manual Threat Entry</span>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+          <label class="form-label">IP Address</label>
+          <input id="manualIP" class="form-input" placeholder="e.g. 192.168.1.100" type="text">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity</label>
+          <select id="manualSev" class="form-select">
+            <option value="CRITICAL">CRITICAL</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <input id="manualReason" class="form-input" placeholder="Manual Admin Entry" type="text">
+        </div>
+        <button id="manualBlockBtn" class="btn-block-now" onclick="manualBlock()">
+          ⚡ TRIGGER BLOCK
+        </button>
+      </div>
+    </div>
+
+    <!-- FEED STATUS -->
+    <div class="panel glass">
+      <div class="panel-head">
+        <span class="panel-title">OSINT Feed Monitor</span>
+      </div>
+      <div class="panel-body" id="feedStatus2">
+        <div class="no-data">Loading...</div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+</div><!-- /main-layout -->
 
 <div id="toast" class="toast"></div>
 <script src="/static/dashboard.js"></script>
