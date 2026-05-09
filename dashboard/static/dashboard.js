@@ -115,41 +115,94 @@ function drawBars(sources) {
 // ── THREAT MAP ───────────────────────────────────────────
 async function buildThreatMap() {
     const data = await fetch("/api/countries").then(r=>r.json());
-    const grid = document.getElementById("mapGrid");
-    if (!grid) return;
-    grid.innerHTML = "";
-    const max = data[0]?.count||1;
-    const cells = 200;
-    for (let i=0; i<cells; i++) {
-        const cell = document.createElement("div");
-        cell.className = "map-cell";
-        const rand = Math.random();
-        const topCountries = data.slice(0,3);
-        const density = topCountries.length ? (topCountries[0].count/max) : 0;
-        if (rand < density*0.08) cell.classList.add("hot1");
-        else if (rand < density*0.18) cell.classList.add("hot2");
-        else if (rand < density*0.3) cell.classList.add("hot3");
-        else if (rand < 0.15) cell.classList.add("warm");
-        grid.appendChild(cell);
-    }
-}
+    const container = document.getElementById("mapGrid");
+    if (!container) return;
+    container.innerHTML = "";
 
-// ── FEED STATUS ──────────────────────────────────────────
-async function fetchFeedStatus() {
-    const data = await fetch("/api/feed_status").then(r=>r.json());
-    const c = document.getElementById("feedStatus");
-    c.innerHTML = "";
-    data.forEach(f => {
-        c.innerHTML += `
-        <div class="feed-row">
-          <span class="feed-pulse"></span>
-          <span class="feed-name">${f.name}</span>
-          <span class="feed-num">${f.count.toLocaleString()}</span>
-          <span class="feed-tag">${f.status}</span>
-        </div>`;
+    const TIME_COLS = 20;
+    const max = data[0]?.count || 1;
+
+    container.style.display = "block";
+
+    data.forEach(c => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex; align-items:center; gap:6px; margin-bottom:4px;";
+
+        const label = document.createElement("span");
+        label.textContent = c.country;
+        label.style.cssText = `
+            width: 36px;
+            font-size: 10px;
+            color: #00f2ff;
+            text-align: right;
+            flex-shrink: 0;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px rgba(0,242,255,0.5);
+        `;
+        row.appendChild(label);
+
+        const cellsWrap = document.createElement("div");
+        cellsWrap.style.cssText = "display:flex; gap:2px; flex:1;";
+
+        const intensity = c.count / max;
+
+        for (let t = 0; t < TIME_COLS; t++) {
+            const cell = document.createElement("div");
+            cell.style.cssText = `
+                flex: 1;
+                height: 14px;
+                border-radius: 2px;
+                transition: all 0.3s;
+            `;
+
+            const rand = Math.random();
+            const base = intensity + (Math.random() * 0.2 - 0.1);
+
+            if (base > 0.8 && rand > 0.3) {
+                cell.style.background = "#ff003c";
+                cell.style.boxShadow  = "0 0 6px rgba(255,0,60,0.6)";
+            } else if (base > 0.5 && rand > 0.3) {
+                cell.style.background = "#ff8c00";
+                cell.style.boxShadow  = "0 0 4px rgba(255,140,0,0.4)";
+            } else if (base > 0.25 && rand > 0.4) {
+                cell.style.background = "rgba(255,0,60,0.3)";
+            } else if (rand > 0.6) {
+                cell.style.background = "rgba(0,242,255,0.12)";
+            } else {
+                cell.style.background = "rgba(0,242,255,0.03)";
+            }
+
+            cellsWrap.appendChild(cell);
+        }
+
+        row.appendChild(cellsWrap);
+        container.appendChild(row);
     });
 }
-
+// ── FEED STATUS ──────────────────────────────────────────
+async function fetchFeedStatus() {
+    try {
+        const data = await fetch("/api/feed_status").then(r=>r.json());
+        const ids = ["feedStatus", "feedStatus2"];
+        ids.forEach(id => {
+            const c = document.getElementById(id);
+            if (!c) return;
+            c.innerHTML = "";
+            data.forEach(f => {
+                c.innerHTML += `
+                <div class="feed-row">
+                  <span class="feed-pulse"></span>
+                  <span class="feed-name">${f.name}</span>
+                  <span class="feed-num">${f.count.toLocaleString()}</span>
+                  <span class="feed-tag">${f.status}</span>
+                </div>`;
+            });
+        });
+    } catch(e) {
+        console.error("Feed status error:", e);
+    }
+}
 // ── COUNTRIES ────────────────────────────────────────────
 async function fetchCountries() {
     const data = await fetch("/api/countries").then(r=>r.json());
