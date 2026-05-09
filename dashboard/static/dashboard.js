@@ -1,312 +1,433 @@
-const API = "";
+// ── STATE ───────────────────────────────────────────────
+let currentSeverity = "";
 
-async function fetchStats() {
-    try {
-        const res = await fetch(`${API}/api/stats`);
-        const data = await res.json();
-        document.getElementById("total").textContent = data.total.toLocaleString();
-        document.getElementById("critical").textContent = data.critical.toLocaleString();
-        document.getElementById("high").textContent = data.high.toLocaleString();
-        document.getElementById("blocked").textContent = data.blocked.toLocaleString();
-        document.getElementById("rollbacks").textContent = data.rollbacks.toLocaleString();
-        drawDonut(data);
-        drawBars(data.sources);
-    } catch(e) { console.error("Stats error:", e); }
+// ── UTILITIES ───────────────────────────────────────────
+function ts(str) {
+    if (!str) return "—";
+    try { return new Date(str).toLocaleString(); }
+    catch { return str.substring(0,19).replace("T"," "); }
 }
 
-function drawDonut(data) {
-    const canvas = document.getElementById("severityChart");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const total = data.critical + data.high + data.medium + data.low || 1;
-    const segments = [
-        { value: data.critical, color: "#ef4444" },
-        { value: data.high,     color: "#f97316" },
-        { value: data.medium,   color: "#eab308" },
-        { value: data.low,      color: "#22c55e" }
+function severityClass(s) {
+    return s === "CRITICAL" ? "b-crit" :
+           s === "HIGH"     ? "b-high" :
+           s === "MEDIUM"   ? "b-med"  : "b-low";
+}
+
+function showToast(msg, type="inf") {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = `toast t-${type} show`;
+    setTimeout(() => t.className = "toast", 3500);
+}
+
+// ── STATS ────────────────────────────────────────────────
+async function fetchStats() {
+    const d = await fetch("/api/stats").then(r=>r.json());
+    document.getElementById("total").textContent    = d.total.toLocaleString();
+    document.getElementById("critical").textContent = d.critical.toLocaleString();
+    document.getElementById("high").textContent     = d.high.toLocaleString();
+    document.getElementById("blocked").textContent  = d.blocked.toLocaleString();
+    document.getElementById("rollbacks").textContent= d.rollbacks.toLocaleString();
+    document.getElementById("comp-total").textContent    = d.blocked;
+    document.getElementById("comp-rollbacks").textContent= d.rollbacks;
+    document.getElementById("comp-critical").textContent = d.critical;
+    drawDonut(d);
+    drawBars(d.sources);
+}
+
+// ── DONUT CHART ──────────────────────────────────────────
+function drawDonut(d) {
+    const cv = document.getElementById("severityChart");
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    const total = d.critical + d.high + d.medium + d.low || 1;
+    const segs = [
+        {v: d.critical, c: "#ff003c"},
+        {v: d.high,     c: "#ff8c00"},
+        {v: d.medium,   c: "#ffd700"},
+        {v: d.low,      c: "#39ff14"}
     ];
-    let angle = -Math.PI / 2;
-    const cx = canvas.width / 2, cy = canvas.height / 2;
-    const r = Math.min(cx, cy) - 8;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    segments.forEach(s => {
-        if (!s.value) return;
-        const sweep = (s.value / total) * 2 * Math.PI;
+    let a = -Math.PI/2;
+    const cx=cv.width/2, cy=cv.height/2, r=Math.min(cx,cy)-6;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    segs.forEach(s => {
+        if (!s.v) return;
+        const sw = (s.v/total)*2*Math.PI;
         ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, r, angle, angle + sweep);
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r,a,a+sw);
         ctx.closePath();
-        ctx.fillStyle = s.color;
+        ctx.fillStyle = s.c;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = s.c;
         ctx.fill();
-        angle += sweep;
+        ctx.shadowBlur = 0;
+        a += sw;
     });
     ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.58, 0, 2 * Math.PI);
-    ctx.fillStyle = "#0f172a";
+    ctx.arc(cx,cy,r*0.6,0,2*Math.PI);
+    ctx.fillStyle = "#0a0f18";
     ctx.fill();
-    ctx.fillStyle = "#f1f5f9";
-    ctx.font = "bold 18px monospace";
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px JetBrains Mono, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(total.toLocaleString(), cx, cy - 4);
-    ctx.font = "11px monospace";
-    ctx.fillStyle = "#64748b";
-    ctx.fillText("TOTAL", cx, cy + 14);
+    ctx.fillText(total.toLocaleString(), cx, cy-2);
+    ctx.font = "9px JetBrains Mono, monospace";
+    ctx.fillStyle = "#4a6080";
+    ctx.fillText("TOTAL", cx, cy+13);
 }
 
+// ── BAR CHART ────────────────────────────────────────────
 function drawBars(sources) {
-    const canvas = document.getElementById("sourceChart");
-    if (!canvas || !sources || !sources.length) return;
-    const ctx = canvas.getContext("2d");
-    const max = Math.max(...sources.map(s => s.count)) || 1;
-    const barW = Math.floor((canvas.width - 40) / sources.length) - 16;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const colors = ["#3b82f6", "#8b5cf6", "#06b6d4"];
-    sources.forEach((s, i) => {
-        const barH = Math.floor((s.count / max) * (canvas.height - 50));
-        const x = 20 + i * (barW + 16);
-        const y = canvas.height - barH - 30;
-        const grad = ctx.createLinearGradient(x, y, x, y + barH);
-        grad.addColorStop(0, colors[i % colors.length]);
-        grad.addColorStop(1, colors[i % colors.length] + "66");
-        ctx.fillStyle = grad;
+    const cv = document.getElementById("sourceChart");
+    if (!cv || !sources?.length) return;
+    const ctx = cv.getContext("2d");
+    const max = Math.max(...sources.map(s=>s.count))||1;
+    const bw = Math.floor((cv.width-40)/sources.length)-12;
+    const colors = ["#00f2ff","#b537f2","#39ff14"];
+    ctx.clearRect(0,0,cv.width,cv.height);
+    sources.forEach((s,i) => {
+        const bh = Math.floor((s.count/max)*(cv.height-50));
+        const x = 20+i*(bw+12), y = cv.height-bh-30;
+        const g = ctx.createLinearGradient(x,y,x,y+bh);
+        g.addColorStop(0, colors[i%colors.length]);
+        g.addColorStop(1, colors[i%colors.length]+"33");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = colors[i%colors.length];
         ctx.beginPath();
-        ctx.roundRect(x, y, barW, barH, 4);
+        if (ctx.roundRect) ctx.roundRect(x,y,bw,bh,3);
+        else ctx.rect(x,y,bw,bh);
         ctx.fill();
-        ctx.fillStyle = "#e2e8f0";
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#c8d8e8";
         ctx.font = "bold 11px monospace";
         ctx.textAlign = "center";
-        ctx.fillText(s.count.toLocaleString(), x + barW / 2, y - 6);
-        ctx.fillStyle = "#64748b";
-        ctx.font = "10px monospace";
-        const name = s.name.length > 10 ? s.name.substring(0, 9) + "…" : s.name;
-        ctx.fillText(name, x + barW / 2, canvas.height - 8);
+        ctx.fillText(s.count.toLocaleString(), x+bw/2, y-6);
+        ctx.fillStyle = "#4a6080";
+        ctx.font = "9px monospace";
+        const nm = s.name.length>10 ? s.name.substring(0,9)+"…" : s.name;
+        ctx.fillText(nm, x+bw/2, cv.height-8);
     });
 }
 
-async function fetchIndicators(severity = "") {
-    try {
-        const url = severity ? `/api/indicators?severity=${severity}&limit=100` : `/api/indicators?limit=100`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const tbody = document.getElementById("indicatorsTable");
-        tbody.innerHTML = "";
-        data.forEach(ind => {
-            const row = document.createElement("tr");
-            const sc = ind.severity === "CRITICAL" ? "sev-critical" :
-                       ind.severity === "HIGH" ? "sev-high" :
-                       ind.severity === "MEDIUM" ? "sev-medium" : "sev-low";
-            const score = ind.risk_score || 0;
-            const barW = score;
-            row.innerHTML = `
-                <td class="mono">${ind.value}</td>
-                <td><span class="tag">${ind.type || "ip"}</span></td>
-                <td>${ind.source}</td>
-                <td><span class="badge ${sc}">${ind.severity}</span></td>
-                <td>
-                    <div class="score-wrap">
-                        <div class="score-bar" style="width:${barW}%"></div>
-                        <span>${score}</span>
-                    </div>
-                </td>
-                <td>${ind.country || "—"}</td>`;
-            tbody.appendChild(row);
-        });
-    } catch(e) { console.error("Indicators error:", e); }
-}
-
-async function fetchBlocked() {
-    try {
-        const res = await fetch(`/api/blocked`);
-        const data = await res.json();
-        const tbody = document.getElementById("blockedTable");
-        tbody.innerHTML = "";
-        document.getElementById("blockedCount").textContent = data.length;
-        if (!data.length) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b">No IPs currently blocked</td></tr>`;
-            return;
-        }
-        data.forEach(ind => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td class="mono red-text">${ind.value}</td>
-                <td><span class="score-pill">${ind.risk_score}</span></td>
-                <td>${ind.country || "—"}</td>
-                <td>${ind.source}</td>
-                <td><button class="btn-rollback" onclick="rollbackIP('${ind.value}')">⟲ Rollback</button></td>`;
-            tbody.appendChild(row);
-        });
-    } catch(e) { console.error("Blocked error:", e); }
-}
-
-async function fetchLogs() {
-    try {
-        const res = await fetch(`/api/logs?limit=50`);
-        const data = await res.json();
-        const tbody = document.getElementById("logsTable");
-        tbody.innerHTML = "";
-        data.forEach(log => {
-            const row = document.createElement("tr");
-            const ac = log.action === "block" ? "action-block" : "action-rollback";
-            const icon = log.action === "block" ? "🔴" : "🟢";
-            row.innerHTML = `
-                <td class="mono">${log.ip}</td>
-                <td><span class="badge ${ac}">${icon} ${log.action.toUpperCase()}</span></td>
-                <td>${log.severity || "—"}</td>
-                <td>${log.source || "—"}</td>
-                <td>${log.risk_score || 0}</td>
-                <td class="ts">${log.timestamp ? log.timestamp.substring(0,19).replace("T"," ") : "—"}</td>`;
-            tbody.appendChild(row);
-        });
-    } catch(e) { console.error("Logs error:", e); }
-}
-
-async function fetchAlerts() {
-    try {
-        const res = await fetch(`/api/alerts`);
-        const data = await res.json();
-        const container = document.getElementById("alertsContainer");
-        container.innerHTML = "";
-        if (!data.length) {
-            container.innerHTML = `<div class="no-alerts">No recent alerts</div>`;
-            return;
-        }
-        data.forEach(alert => {
-            const div = document.createElement("div");
-            div.className = "alert-item";
-            div.innerHTML = `
-                <div class="alert-top">
-                    <span class="alert-icon">⚠</span>
-                    <span class="alert-title">SECURITY ALERT — THREAT BLOCKED</span>
-                    <span class="alert-time">${alert.timestamp ? alert.timestamp.substring(0,19).replace("T"," ") : ""}</span>
-                </div>
-                <div class="alert-body">
-                    <span class="alert-ip">${alert.ip}</span>
-                    <span class="alert-badge">Score: ${alert.risk_score}/100</span>
-                    <span class="alert-badge">${alert.severity}</span>
-                    <span class="alert-src">${alert.source}</span>
-                </div>`;
-            container.appendChild(div);
-        });
-    } catch(e) { console.error("Alerts error:", e); }
-}
-
-async function fetchFeedStatus() {
-    try {
-        const res = await fetch(`/api/feed_status`);
-        const data = await res.json();
-        const container = document.getElementById("feedStatus");
-        container.innerHTML = "";
-        data.forEach(feed => {
-            const div = document.createElement("div");
-            div.className = "feed-row";
-            div.innerHTML = `
-                <span class="feed-dot online"></span>
-                <span class="feed-name">${feed.name}</span>
-                <span class="feed-count">${feed.count.toLocaleString()}</span>
-                <span class="feed-ok">${feed.status}</span>`;
-            container.appendChild(div);
-        });
-    } catch(e) { console.error("Feed status error:", e); }
-}
-
-async function fetchCountries() {
-    try {
-        const res = await fetch(`/api/countries`);
-        const data = await res.json();
-        const tbody = document.getElementById("countriesTable");
-        tbody.innerHTML = "";
-        const max = data[0]?.count || 1;
-        data.forEach((c, i) => {
-            const row = document.createElement("tr");
-            const pct = Math.round((c.count / max) * 100);
-            row.innerHTML = `
-                <td>${i+1}</td>
-                <td>${c.country}</td>
-                <td>
-                    <div class="country-bar-wrap">
-                        <div class="country-bar" style="width:${pct}%"></div>
-                        <span>${c.count}</span>
-                    </div>
-                </td>`;
-            tbody.appendChild(row);
-        });
-    } catch(e) { console.error("Countries error:", e); }
-}
-
-async function fetchCompliance() {
-    try {
-        const res = await fetch(`/api/stats`);
-        const data = await res.json();
-        document.getElementById("comp-total").textContent = data.blocked;
-        document.getElementById("comp-rollbacks").textContent = data.rollbacks;
-        document.getElementById("comp-critical").textContent = data.critical;
-        document.getElementById("comp-time").textContent = new Date().toISOString().substring(0,19).replace("T"," ") + " UTC";
-    } catch(e) {}
-}
-
-async function rollbackIP(ip) {
-    const reason = prompt(`Reason for rolling back ${ip}:`, "False positive confirmed by SOC analyst");
-    if (!reason) return;
-    const btn = document.querySelector(`button[onclick="rollbackIP('${ip}')"]`);
-    if (btn) { btn.textContent = "Processing..."; btn.disabled = true; }
-    try {
-        const res = await fetch(`/api/rollback`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ip, reason})
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast(`✓ ${ip} successfully unblocked`, "success");
-        } else {
-            showToast(`✗ Failed: ${data.message}`, "error");
-        }
-        refreshAll();
-    } catch(e) {
-        showToast(`✗ Error: ${e.message}`, "error");
+// ── THREAT MAP ───────────────────────────────────────────
+async function buildThreatMap() {
+    const data = await fetch("/api/countries").then(r=>r.json());
+    const grid = document.getElementById("mapGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    const max = data[0]?.count||1;
+    const cells = 200;
+    for (let i=0; i<cells; i++) {
+        const cell = document.createElement("div");
+        cell.className = "map-cell";
+        const rand = Math.random();
+        const topCountries = data.slice(0,3);
+        const density = topCountries.length ? (topCountries[0].count/max) : 0;
+        if (rand < density*0.08) cell.classList.add("hot1");
+        else if (rand < density*0.18) cell.classList.add("hot2");
+        else if (rand < density*0.3) cell.classList.add("hot3");
+        else if (rand < 0.15) cell.classList.add("warm");
+        grid.appendChild(cell);
     }
 }
 
-function showToast(msg, type) {
-    const toast = document.getElementById("toast");
-    toast.textContent = msg;
-    toast.className = `toast toast-${type} show`;
-    setTimeout(() => toast.className = "toast", 3000);
+// ── FEED STATUS ──────────────────────────────────────────
+async function fetchFeedStatus() {
+    const data = await fetch("/api/feed_status").then(r=>r.json());
+    const c = document.getElementById("feedStatus");
+    c.innerHTML = "";
+    data.forEach(f => {
+        c.innerHTML += `
+        <div class="feed-row">
+          <span class="feed-pulse"></span>
+          <span class="feed-name">${f.name}</span>
+          <span class="feed-num">${f.count.toLocaleString()}</span>
+          <span class="feed-tag">${f.status}</span>
+        </div>`;
+    });
 }
 
-function filterBySeverity(sev) {
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    event.target.classList.add("active");
+// ── COUNTRIES ────────────────────────────────────────────
+async function fetchCountries() {
+    const data = await fetch("/api/countries").then(r=>r.json());
+    const tbody = document.getElementById("countriesTable");
+    tbody.innerHTML = "";
+    const max = data[0]?.count||1;
+    data.forEach((c,i) => {
+        const pct = Math.round((c.count/max)*100);
+        tbody.innerHTML += `
+        <tr>
+          <td class="country-rank">${i+1}</td>
+          <td class="country-name">${c.country}</td>
+          <td>
+            <div class="country-bar-wrap">
+              <div class="country-bar" style="width:${pct}%"></div>
+              <span class="country-num">${c.count}</span>
+            </div>
+          </td>
+        </tr>`;
+    });
+}
+
+// ── ALERTS ───────────────────────────────────────────────
+async function fetchAlerts() {
+    const data = await fetch("/api/alerts").then(r=>r.json());
+    const c = document.getElementById("alertsContainer");
+    c.innerHTML = "";
+    if (!data.length) { c.innerHTML = `<div class="no-data">[ NO RECENT ALERTS ]</div>`; return; }
+    data.forEach(a => {
+        c.innerHTML += `
+        <div class="alert-item">
+          <div class="alert-top">
+            <span class="alert-icon">⚡</span>
+            <span class="alert-title">THREAT BLOCKED — AUTO ENFORCEMENT</span>
+            <span class="alert-time">${ts(a.timestamp)}</span>
+          </div>
+          <div class="alert-body">
+            <span class="alert-ip">${a.ip}</span>
+            <span class="alert-chip">${a.severity}</span>
+            <span class="alert-chip">Score: ${a.risk_score}/100</span>
+            <span class="alert-src">${a.source}</span>
+          </div>
+        </div>`;
+    });
+}
+
+// ── INDICATORS TABLE ─────────────────────────────────────
+async function fetchIndicators(sev="") {
+    currentSeverity = sev;
+    const url = sev ? `/api/indicators?severity=${sev}&limit=100` : `/api/indicators?limit=100`;
+    const data = await fetch(url).then(r=>r.json());
+    const tbody = document.getElementById("indicatorsTable");
+    tbody.innerHTML = "";
+    data.forEach(d => {
+        const sc = severityClass(d.severity);
+        tbody.innerHTML += `
+        <tr>
+          <td class="mono">${d.value}</td>
+          <td><span class="badge b-tag">${d.type||"ip"}</span></td>
+          <td>${d.source}</td>
+          <td><span class="badge ${sc}">${d.severity}</span></td>
+          <td>
+            <div class="score-wrap">
+              <div class="score-track"><div class="score-fill" style="width:${d.risk_score||0}%"></div></div>
+              <span class="score-num">${d.risk_score||0}</span>
+            </div>
+          </td>
+          <td>${d.country||"—"}</td>
+        </tr>`;
+    });
+}
+
+function filterSev(sev, btn) {
+    document.querySelectorAll(".flt-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
     fetchIndicators(sev);
 }
 
-function switchTab(tab) {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-    document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
-    document.getElementById(`tab-${tab}`).classList.add("active");
+// ── BLOCKED IPs ──────────────────────────────────────────
+async function fetchBlocked() {
+    const data = await fetch("/api/blocked").then(r=>r.json());
+    const tbody = document.getElementById("blockedTable");
+    const cnt = document.getElementById("blockedCount");
+    if (cnt) cnt.textContent = data.length;
+    tbody.innerHTML = "";
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="no-data">[ NO ACTIVE BLOCKS ]</td></tr>`;
+        return;
+    }
+    data.forEach(d => {
+        tbody.innerHTML += `
+        <tr>
+          <td class="mono red-text">${d.value}</td>
+          <td><span style="color:#ff003c;font-weight:700">${d.risk_score}</span></td>
+          <td>${d.country||"—"}</td>
+          <td>${d.source}</td>
+          <td>
+            <button class="btn-rollback" onclick="showRollbackMenu('${d.value}')">⟲ Rollback</button>
+          </td>
+        </tr>`;
+    });
 }
 
+// ── ROLLBACK MENU ────────────────────────────────────────
+function showRollbackMenu(ip) {
+    const mode = confirm(
+        `ROLLBACK OPTIONS for ${ip}\n\n` +
+        `Click OK for PERMANENT rollback\n` +
+        `Click Cancel for TEMPORARY (24h) rollback`
+    );
+    const modeStr = mode ? "permanent" : "temp24h";
+    const reason  = prompt("Enter reason:", "False positive confirmed by SOC analyst");
+    if (!reason) return;
+    doRollback(ip, reason, modeStr);
+}
+
+async function doRollback(ip, reason, mode) {
+    showToast(`Processing rollback for ${ip}...`, "inf");
+    const res  = await fetch("/api/rollback", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ip, reason, mode})
+    });
+    const data = await res.json();
+    showToast(data.success ? `✓ ${data.message}` : `✗ ${data.message}`,
+              data.success ? "ok" : "err");
+    if (data.success) refreshAll();
+}
+
+// ── ABUSE REPORT ─────────────────────────────────────────
+async function abuseReport(ip) {
+    const res  = await fetch("/api/abuse-report", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ip})
+    });
+    const data = await res.json();
+    showToast(data.message, "inf");
+    window.open(data.abuseipdb_url, "_blank");
+}
+
+// ── AUDIT LOGS ───────────────────────────────────────────
+async function fetchLogs() {
+    const data = await fetch("/api/logs?limit=50").then(r=>r.json());
+    const tbody = document.getElementById("logsTable");
+    tbody.innerHTML = "";
+    data.forEach(d => {
+        const ac = d.action==="block" ? "b-block" : "b-rollbk";
+        const icon = d.action==="block" ? "🔴" : "🟢";
+        tbody.innerHTML += `
+        <tr>
+          <td class="mono">${d.ip}</td>
+          <td><span class="badge ${ac}">${icon} ${d.action.toUpperCase()}</span></td>
+          <td>${d.severity||"—"}</td>
+          <td>${d.source||"—"}</td>
+          <td>${d.risk_score||0}</td>
+          <td class="ts">${ts(d.timestamp)}</td>
+        </tr>`;
+    });
+}
+
+// ── HEALTH MONITOR ───────────────────────────────────────
+async function fetchHealth() {
+    const data = await fetch("/api/health").then(r=>r.json());
+    const c = document.getElementById("healthPanel");
+    if (!c) return;
+
+    const mg = data.mongodb;
+    const es = data.elasticsearch;
+    const ip = data.iptables;
+
+    c.innerHTML = `
+    <div class="health-row">
+      <span class="health-icon">🗄</span>
+      <span class="health-name">MongoDB</span>
+      <span class="health-status ${mg.ok?"h-ok":"h-err"}">${mg.status}</span>
+    </div>
+    <div class="health-row">
+      <span class="health-icon">🔍</span>
+      <span class="health-name">Elasticsearch</span>
+      <span class="health-status ${es.ok?"h-ok":"h-warn"}">${es.status}</span>
+    </div>
+    <div class="health-row">
+      <span class="health-icon">🛡</span>
+      <span class="health-name">iptables</span>
+      <span class="health-status ${ip.ok?"h-ok":"h-warn"}">${ip.status}</span>
+      <span class="health-detail">${ip.rules} rules</span>
+    </div>`;
+}
+
+// ── WHOIS LOOKUP ─────────────────────────────────────────
+async function lookupWhois() {
+    const ip = document.getElementById("whoisInput").value.trim();
+    if (!ip) { showToast("Enter an IP address", "err"); return; }
+    const box = document.getElementById("whoisResult");
+    box.innerHTML = `<span style="color:#4a6080">Looking up ${ip}...</span>`;
+    try {
+        const data = await fetch(`/api/whois/${ip}`).then(r=>r.json());
+        if (data.error) { box.innerHTML = `<span class="whois-warn">Error: ${data.error}</span>`; return; }
+        const vpn  = data.proxy  ? `<span class="whois-warn">⚠ VPN/PROXY DETECTED</span>` : `<span style="color:#39ff14">✓ No proxy</span>`;
+        const host = data.hosting? `<span class="whois-warn">⚠ HOSTING/DC</span>` : `<span style="color:#39ff14">✓ Residential</span>`;
+        box.innerHTML = `
+        <div><span class="whois-key">IP:      </span><span class="whois-val">${data.ip}</span></div>
+        <div><span class="whois-key">Country: </span><span class="whois-val">${data.country}</span></div>
+        <div><span class="whois-key">Region:  </span><span class="whois-val">${data.region}, ${data.city}</span></div>
+        <div><span class="whois-key">ISP:     </span><span class="whois-val">${data.isp}</span></div>
+        <div><span class="whois-key">Org:     </span><span class="whois-val">${data.org}</span></div>
+        <div><span class="whois-key">AS:      </span><span class="whois-val">${data.as}</span></div>
+        <div><span class="whois-key">Proxy:   </span>${vpn}</div>
+        <div><span class="whois-key">Hosting: </span>${host}</div>`;
+    } catch(e) {
+        box.innerHTML = `<span class="whois-warn">Lookup failed: ${e.message}</span>`;
+    }
+}
+
+// ── MANUAL BLOCK ─────────────────────────────────────────
+async function manualBlock() {
+    const ip  = document.getElementById("manualIP").value.trim();
+    const sev = document.getElementById("manualSev").value;
+    const rsn = document.getElementById("manualReason").value.trim() || "Manual Admin Entry";
+    if (!ip) { showToast("Enter an IP address", "err"); return; }
+
+    const btn = document.getElementById("manualBlockBtn");
+    btn.textContent = "BLOCKING...";
+    btn.disabled = true;
+
+    const res  = await fetch("/api/manual-block", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ip, severity: sev, reason: rsn})
+    });
+    const data = await res.json();
+
+    showToast(data.success ? `✓ ${data.message}` : `✗ ${data.message}`,
+              data.success ? "ok" : "err");
+
+    btn.textContent = "⚡ TRIGGER BLOCK";
+    btn.disabled = false;
+
+    if (data.success) {
+        document.getElementById("manualIP").value = "";
+        refreshAll();
+    }
+}
+
+// ── THEME TOGGLE ─────────────────────────────────────────
+function toggleTheme() {
+    document.body.classList.toggle("light");
+    const btn = document.getElementById("themeBtn");
+    btn.textContent = document.body.classList.contains("light") ? "🌙 Dark" : "☀ Light";
+}
+
+// ── CLOCK ────────────────────────────────────────────────
 function updateClock() {
-    const now = new Date();
     const el = document.getElementById("clock");
-    if (el) el.textContent = now.toISOString().substring(0,19).replace("T"," ") + " UTC";
+    if (el) el.textContent = new Date().toLocaleString() + " LOCAL";
 }
 
+// ── REFRESH ALL ──────────────────────────────────────────
 async function refreshAll() {
-    document.getElementById("refreshIcon").style.animation = "spin 1s linear infinite";
-    await Promise.all([
+    const icon = document.getElementById("refreshIcon");
+    if (icon) icon.style.animation = "spin 0.8s linear infinite";
+    await Promise.allSettled([
         fetchStats(),
-        fetchIndicators(),
-        fetchLogs(),
-        fetchBlocked(),
         fetchAlerts(),
+        fetchIndicators(currentSeverity),
+        fetchBlocked(),
+        fetchLogs(),
         fetchFeedStatus(),
         fetchCountries(),
-        fetchCompliance()
+        fetchHealth(),
+        buildThreatMap()
     ]);
-    document.getElementById("refreshIcon").style.animation = "";
-    document.getElementById("lastUpdate").textContent = new Date().toISOString().substring(11,19) + " UTC";
+    if (icon) icon.style.animation = "";
+    const lu = document.getElementById("lastUpdate");
+    if (lu) lu.textContent = new Date().toLocaleTimeString();
+    const ct = document.getElementById("comp-time");
+    if (ct) ct.textContent = new Date().toLocaleString();
 }
 
 setInterval(refreshAll, 30000);
