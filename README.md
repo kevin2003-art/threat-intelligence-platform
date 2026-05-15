@@ -37,6 +37,7 @@ AlienVault OTX feed, Main aggregator, Risk scoring engine, Policy enforcement da
 
 
 ## Project Structure
+```
 
 threat-intelligence-platform/
 ├── src/
@@ -77,7 +78,7 @@ threat-intelligence-platform/
 │   ├── architecture.md
 │   └── final_submission.md
 └── start.sh
-
+```
 
 
 
